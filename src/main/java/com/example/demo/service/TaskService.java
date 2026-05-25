@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.exception.BulkUpdateException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.model.Task;
 import com.example.demo.repository.TaskRepository;
@@ -7,17 +8,26 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Qualifier;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
 
     private final TaskRepository taskRepository;
+    private final Executor taskBulkExecutor;
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, @Qualifier("taskBulkExecutor") Executor taskBulkExecutor) {
         this.taskRepository = taskRepository;
+        this.taskBulkExecutor = taskBulkExecutor;
     }
 
     @Cacheable("tasks")
@@ -40,11 +50,61 @@ public class TaskService {
     @CacheEvict(value = "tasks", allEntries = true)
     @CachePut(value = "task", key = "#id")
     public Task updateTask(Long id, Task updatedTask) {
+        return applyUpdateTask(id, updatedTask);
+    }
+
+    @Async("taskBulkExecutor")
+    public CompletableFuture<List<Task>> bulkUpdateTasks(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            throw new IllegalArgumentException("Task list must not be empty for bulk update.");
+        }
+
+        List<CompletableFuture<Task>> futures = tasks.stream()
+                .map(task -> CompletableFuture.supplyAsync(() -> updateTaskSafely(task), taskBulkExecutor))
+                .collect(Collectors.toList());
+
+        CompletableFuture<Void> allDone = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+
+        return allDone.thenApply(v -> {
+            List<Task> updatedTasks = new ArrayList<>();
+            List<String> errors = new ArrayList<>();
+
+            for (CompletableFuture<Task> future : futures) {
+                try {
+                    updatedTasks.add(future.join());
+                } catch (CompletionException ex) {
+                    errors.add(unwrap(ex).getMessage());
+                }
+            }
+
+            if (!errors.isEmpty()) {
+                throw new BulkUpdateException("Bulk update completed with errors.", errors);
+            }
+
+            return updatedTasks;
+        });
+    }
+
+    private Task updateTaskSafely(Task task) {
+        if (task == null || task.getId() == null) {
+            throw new IllegalArgumentException("Each task must include an id for bulk update.");
+        }
+        return applyUpdateTask(task.getId(), task);
+    }
+
+    private Task applyUpdateTask(Long id, Task updatedTask) {
         Task existing = getTask(id);
         existing.setTitle(updatedTask.getTitle());
         existing.setDescription(updatedTask.getDescription());
         existing.setCompleted(updatedTask.isCompleted());
         return taskRepository.save(existing);
+    }
+
+    private Throwable unwrap(Throwable throwable) {
+        if (throwable instanceof CompletionException && throwable.getCause() != null) {
+            return unwrap(throwable.getCause());
+        }
+        return throwable;
     }
 
     @Caching(evict = {

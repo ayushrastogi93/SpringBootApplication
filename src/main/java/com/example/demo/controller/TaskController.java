@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -53,6 +54,12 @@ public class TaskController {
     @PutMapping("/{id}")
     public Task updateTask(@PathVariable Long id, @RequestBody Task task) {
         return taskService.updateTask(id, task);
+    }
+
+    @PutMapping("/bulk")
+    public CompletableFuture<ResponseEntity<List<Task>>> bulkUpdateTasks(@RequestBody List<Task> tasks) {
+        return taskService.bulkUpdateTasks(tasks)
+                .thenApply(ResponseEntity::ok);
     }
 
     @DeleteMapping("/{id}")
