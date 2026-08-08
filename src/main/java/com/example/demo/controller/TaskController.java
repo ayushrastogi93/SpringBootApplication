@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
 @RequestMapping("/api/tasks")
 public class TaskController {
 
-    private final TaskService taskService;
+    private final TaskService taskService; 
 
     public TaskController(TaskService taskService) {
         this.taskService = taskService;
@@ -33,7 +33,7 @@ public class TaskController {
         return taskService.getTask(id);
     }
 
-    @PostMapping
+    @PostMapping("/newtask")
     @RateLimiter(name = "createTaskRateLimiter", fallbackMethod = "createTaskFallback")
     public ResponseEntity<Object> createTask(@RequestBody Task task) {
         Task created = taskService.createTask(task);

@@ -1,6 +1,5 @@
 package com.example.demo.exception;
 
-import com.example.demo.exception.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import org.springframework.http.HttpStatus;

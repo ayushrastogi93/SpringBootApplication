@@ -46,7 +46,19 @@ management:
   endpoints:
     web:
       exposure:
-        include: '*'
+        include: health,info,metrics,prometheus,loggers,threaddump,beans,env
   endpoint:
     health:
+      validate-group-membership: false
+      show-components: always
+      probes:
+        enabled: true
       show-details: always
+      group:
+        readiness:
+          include: db, taskHealthIndicator
+        liveness:
+          include: ping
+  info:
+    env:
+      enabled: true
