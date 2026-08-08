@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
@@ -35,9 +36,13 @@ public class TaskService {
         return taskRepository.findAll();
     }
 
+    public Optional<Task> getTaskOptional(Long id) {
+        return taskRepository.findById(id);
+    }
+
     @Cacheable(value = "task", key = "#id")
     public Task getTask(Long id) {
-        return taskRepository.findById(id)
+        return getTaskOptional(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id " + id));
     }
 
@@ -59,14 +64,15 @@ public class TaskService {
             throw new IllegalArgumentException("Task list must not be empty for bulk update.");
         }
 
-        List<CompletableFuture<Task>> futures = tasks.stream()
-                .map(task -> CompletableFuture.supplyAsync(() -> updateTaskSafely(task), taskBulkExecutor))
-                .collect(Collectors.toList());
+        List<CompletableFuture<Task>> futures = new ArrayList<>(tasks.size());
+        for (Task task : tasks) {
+            futures.add(CompletableFuture.supplyAsync(() -> updateTaskSafely(task), taskBulkExecutor));
+        }
 
         CompletableFuture<Void> allDone = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 
         return allDone.thenApply(v -> {
-            List<Task> updatedTasks = new ArrayList<>();
+            List<Task> updatedTasks = new ArrayList<>(tasks.size());
             List<String> errors = new ArrayList<>();
 
             for (CompletableFuture<Task> future : futures) {

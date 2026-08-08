@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.CreateTaskRequestV2;
 import com.example.demo.exception.ErrorResponse;
 import com.example.demo.model.Task;
 import com.example.demo.service.TaskService;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
-@RequestMapping("/api/tasks")
+@RequestMapping("/api")
 public class TaskController {
 
     private final TaskService taskService; 
@@ -23,19 +24,28 @@ public class TaskController {
         this.taskService = taskService;
     }
 
-    @GetMapping
+    @GetMapping("/tasks")
     public List<Task> getAllTasks() {
         return taskService.getAllTasks();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/tasks/{id}")
     public Task getTaskById(@PathVariable Long id) {
         return taskService.getTask(id);
     }
 
-    @PostMapping("/newtask")
+
+    @PostMapping(path = {"/tasks", "/v1/tasks"})
     @RateLimiter(name = "createTaskRateLimiter", fallbackMethod = "createTaskFallback")
     public ResponseEntity<Object> createTask(@RequestBody Task task) {
+        Task created = taskService.createTask(task);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PostMapping("/v2/tasks")
+    @RateLimiter(name = "createTaskRateLimiter", fallbackMethod = "createTaskFallback")
+    public ResponseEntity<Object> createTaskV2(@RequestBody CreateTaskRequestV2 request) {
+        Task task = new Task(request.getName(), request.getDetails(), request.isDone());
         Task created = taskService.createTask(task);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -46,23 +56,23 @@ public class TaskController {
                 HttpStatus.TOO_MANY_REQUESTS.value(),
                 "Too Many Requests",
                 "Rate limit exceeded: createTask is limited to 3 requests per minute.",
-                "/api/tasks"
+                "/api/v1/tasks"
         );
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/tasks/{id}")
     public Task updateTask(@PathVariable Long id, @RequestBody Task task) {
         return taskService.updateTask(id, task);
     }
 
-    @PutMapping("/bulk")
+    @PutMapping("/tasks/bulk")
     public CompletableFuture<ResponseEntity<List<Task>>> bulkUpdateTasks(@RequestBody List<Task> tasks) {
         return taskService.bulkUpdateTasks(tasks)
                 .thenApply(ResponseEntity::ok);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/tasks/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteTask(@PathVariable Long id) {
         taskService.deleteTask(id);

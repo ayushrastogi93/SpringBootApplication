@@ -21,11 +21,11 @@ public class AsyncConfig implements AsyncConfigurer {
     @Bean(name = "taskBulkExecutor")
     public Executor taskBulkExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(8);
-        executor.setQueueCapacity(10);
+        executor.setCorePoolSize(256);
+        executor.setMaxPoolSize(256);
+        executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("TaskBulkExecutor-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
     }
