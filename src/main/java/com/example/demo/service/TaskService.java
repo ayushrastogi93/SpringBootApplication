@@ -18,13 +18,16 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
-import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class TaskService {
 
     private final TaskRepository taskRepository;
     private final Executor taskBulkExecutor;
+    private static final Logger logger = LoggerFactory.getLogger(TaskService.class);
 
     public TaskService(TaskRepository taskRepository, @Qualifier("taskBulkExecutor") Executor taskBulkExecutor) {
         this.taskRepository = taskRepository;
@@ -33,21 +36,25 @@ public class TaskService {
 
     @Cacheable("tasks")
     public List<Task> getAllTasks() {
+        logger.info("Fetching all tasks from the database");
         return taskRepository.findAll();
     }
 
     public Optional<Task> getTaskOptional(Long id) {
+        logger.info("Fetching task with ID: {}", id);
         return taskRepository.findById(id);
     }
 
     @Cacheable(value = "task", key = "#id")
     public Task getTask(Long id) {
+        logger.info("Fetching task with ID: {}", id);
         return getTaskOptional(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id " + id));
     }
 
     @CacheEvict(value = "tasks", allEntries = true)
     public Task createTask(Task task) {
+        logger.info("Creating task: {}", task);
         task.setId(null);
         return taskRepository.save(task);
     }
@@ -55,11 +62,13 @@ public class TaskService {
     @CacheEvict(value = "tasks", allEntries = true)
     @CachePut(value = "task", key = "#id")
     public Task updateTask(Long id, Task updatedTask) {
+        logger.info("Updating task with ID: {}", id);
         return applyUpdateTask(id, updatedTask);
     }
 
     @Async("taskBulkExecutor")
     public CompletableFuture<List<Task>> bulkUpdateTasks(List<Task> tasks) {
+        logger.info("Initiating bulk update for {} tasks", tasks.size());
         if (tasks == null || tasks.isEmpty()) {
             throw new IllegalArgumentException("Task list must not be empty for bulk update.");
         }
@@ -92,6 +101,7 @@ public class TaskService {
     }
 
     private Task updateTaskSafely(Task task) {
+        logger.info("Updating task safely: {}", task);
         if (task == null || task.getId() == null) {
             throw new IllegalArgumentException("Each task must include an id for bulk update.");
         }
