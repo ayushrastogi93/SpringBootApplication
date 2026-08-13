@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "TaskMaster")
-public class Task {
+public class TaskDao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,10 +22,10 @@ public class Task {
     @Column(name = "completed")
     private boolean completed;
 
-    public Task() {
+    public TaskDao() {
     }
 
-    public Task(String title, String description, boolean completed) {
+    public TaskDao(String title, String description, boolean completed) {
         this.title = title;
         this.description = description;
         this.completed = completed;

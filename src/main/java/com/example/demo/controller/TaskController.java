@@ -2,7 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.CreateTaskRequestV2;
 import com.example.demo.exception.ErrorResponse;
-import com.example.demo.model.Task;
+import com.example.demo.model.TaskDao;
 import com.example.demo.service.TaskService;
 import com.example.demo.service.NotificationService;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
@@ -32,13 +32,13 @@ public class TaskController {
     }
 
     @GetMapping("/tasks")
-    public List<Task> getAllTasks() {
+    public List<TaskDao> getAllTasks() {
         logger.info("Received request to get all tasks");
         return taskService.getAllTasks();
     }
 
     @GetMapping("/tasks/{id}")
-    public Task getTaskById(@PathVariable Long id) {
+    public TaskDao getTaskById(@PathVariable Long id) {
         logger.info("Received request to get task by ID: {}", id);
         return taskService.getTask(id);
     }
@@ -46,15 +46,15 @@ public class TaskController {
 
     @PostMapping(path = {"/tasks", "/v1/tasks"})
     @RateLimiter(name = "createTaskRateLimiter", fallbackMethod = "createTaskFallback")
-    public ResponseEntity<Object> createTask(@RequestBody Task task) {
+    public ResponseEntity<Object> createTask(@RequestBody TaskDao task) {
         logger.info("Received request to create task: {}", task);
-        if(task.getTitle() == "13") {
+        if(task.getTitle().equalsIgnoreCase("13")) {
             logger.warn("Attempted to create a task with restricted title: {}", task.getTitle());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("New task cannot have a restricted title.");
         }
-        Task created = taskService.createTask(task);
+        TaskDao created = taskService.createTask(task);
         // Inject a service to notify the downstream service about the new task creation
-        notificationService.notifyTaskCreated(created);
+        notificationService.publishTaskCreated(created);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -62,12 +62,12 @@ public class TaskController {
     @RateLimiter(name = "createTaskRateLimiter", fallbackMethod = "createTaskFallback")
     public ResponseEntity<Object> createTaskV2(@RequestBody CreateTaskRequestV2 request) {
         logger.info("Received request to create task: {}", request);
-        Task task = new Task(request.getName(), request.getDetails(), request.isDone());
-        Task created = taskService.createTask(task);
+        TaskDao task = new TaskDao(request.getName(), request.getDetails(), request.isDone());
+        TaskDao created = taskService.createTask(task);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    public ResponseEntity<Object> createTaskFallback(Task task, RequestNotPermitted ex) {
+    public ResponseEntity<Object> createTaskFallback(TaskDao task, RequestNotPermitted ex) {
         logger.warn("Rate limit exceeded for createTask");
         ErrorResponse errorResponse = new ErrorResponse(
                 LocalDateTime.now(),
@@ -80,13 +80,13 @@ public class TaskController {
     }
 
     @PutMapping("/tasks/{id}")
-    public Task updateTask(@PathVariable Long id, @RequestBody Task task) {
+    public TaskDao updateTask(@PathVariable Long id, @RequestBody TaskDao task) {
         logger.info("Received request to update task: {}", task);
         return taskService.updateTask(id, task);
     }
 
     @PutMapping("/tasks/bulk")
-    public CompletableFuture<ResponseEntity<List<Task>>> bulkUpdateTasks(@RequestBody List<Task> tasks) {
+    public CompletableFuture<ResponseEntity<List<TaskDao>>> bulkUpdateTasks(@RequestBody List<TaskDao> tasks) {
         logger.info("Received request to bulk update tasks: {}", tasks);
         return taskService.bulkUpdateTasks(tasks)
                 .thenApply(ResponseEntity::ok);

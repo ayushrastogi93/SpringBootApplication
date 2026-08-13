@@ -1,6 +1,6 @@
 package com.example.demo.controller;
 
-import com.example.demo.model.Task;
+import com.example.demo.model.TaskDao;
 import com.example.demo.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,10 +28,10 @@ class TaskControllerTest {
 
     @Test
     void createTaskShouldBeAvailableAtVersionedApiPath() throws Exception {
-        Task createdTask = new Task("Write tests", "Add controller coverage", false);
+        TaskDao createdTask = new TaskDao("Write tests", "Add controller coverage", false);
         createdTask.setId(1L);
 
-        when(taskService.createTask(any(Task.class))).thenReturn(createdTask);
+        when(taskService.createTask(any(TaskDao.class))).thenReturn(createdTask);
 
         mockMvc.perform(post("/api/v1/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -49,10 +49,10 @@ class TaskControllerTest {
 
     @Test
     void createTaskV2ShouldAcceptTheNewDtoContract() throws Exception {
-        Task createdTask = new Task("Write tests", "Add controller coverage", false);
+        TaskDao createdTask = new TaskDao("Write tests", "Add controller coverage", false);
         createdTask.setId(2L);
 
-        when(taskService.createTask(any(Task.class))).thenReturn(createdTask);
+        when(taskService.createTask(any(TaskDao.class))).thenReturn(createdTask);
 
         mockMvc.perform(post("/api/v2/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
