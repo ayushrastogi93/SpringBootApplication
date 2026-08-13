@@ -1,6 +1,5 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.CreateTaskRequestV2;
 import com.example.demo.model.Task;
 import com.example.demo.service.TaskService;
 import org.junit.jupiter.api.Test;

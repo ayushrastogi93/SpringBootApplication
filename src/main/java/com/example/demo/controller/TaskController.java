@@ -4,6 +4,7 @@ import com.example.demo.dto.CreateTaskRequestV2;
 import com.example.demo.exception.ErrorResponse;
 import com.example.demo.model.Task;
 import com.example.demo.service.TaskService;
+import com.example.demo.service.NotificationService;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import org.springframework.http.HttpStatus;
@@ -22,10 +23,12 @@ import org.slf4j.LoggerFactory;
 public class TaskController {
 
     private final TaskService taskService; 
+    private final NotificationService notificationService; // Inject the notification service
     private static final Logger logger = LoggerFactory.getLogger(TaskController.class);
 
-    public TaskController(TaskService taskService) {
+    public TaskController(TaskService taskService, NotificationService notificationService) {
         this.taskService = taskService;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/tasks")
@@ -45,7 +48,13 @@ public class TaskController {
     @RateLimiter(name = "createTaskRateLimiter", fallbackMethod = "createTaskFallback")
     public ResponseEntity<Object> createTask(@RequestBody Task task) {
         logger.info("Received request to create task: {}", task);
+        if(task.getTitle() == "13") {
+            logger.warn("Attempted to create a task with restricted title: {}", task.getTitle());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("New task cannot have a restricted title.");
+        }
         Task created = taskService.createTask(task);
+        // Inject a service to notify the downstream service about the new task creation
+        notificationService.notifyTaskCreated(created);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
