@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "NotificationMaster")
-public class Notification {
+public class NotificationDao {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -26,9 +26,9 @@ public class Notification {
     private String timestamp; // e.g., "2024-06-01T12:00:00Z"
 
     // Constructors
-    public Notification() {}
+    public NotificationDao() {}
 
-    public Notification(String message, String recipient, String type, String status, String timestamp) {
+    public NotificationDao(String message, String recipient, String type, String status, String timestamp) {
         this.message = message;
         this.recipient = recipient;
         this.type = type;

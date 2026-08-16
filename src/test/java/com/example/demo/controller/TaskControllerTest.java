@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.TaskDao;
+import com.example.demo.service.NotificationService;
 import com.example.demo.service.TaskService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -25,6 +27,9 @@ class TaskControllerTest {
 
     @MockBean
     private TaskService taskService;
+
+    @MockBean
+    private NotificationService notificationService;
 
     @Test
     void createTaskShouldBeAvailableAtVersionedApiPath() throws Exception {
@@ -45,6 +50,8 @@ class TaskControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.title").value("Write tests"));
+
+        verify(notificationService).publishTaskCreated(createdTask);
     }
 
     @Test
@@ -66,5 +73,7 @@ class TaskControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(2))
                 .andExpect(jsonPath("$.title").value("Write tests"));
+
+        verify(notificationService).publishTaskCreated(createdTask);
     }
 }

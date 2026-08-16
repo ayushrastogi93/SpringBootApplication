@@ -64,6 +64,7 @@ public class TaskController {
         logger.info("Received request to create task: {}", request);
         TaskDao task = new TaskDao(request.getName(), request.getDetails(), request.isDone());
         TaskDao created = taskService.createTask(task);
+        notificationService.publishTaskCreated(created);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
